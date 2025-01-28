@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eboys Jogo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #070808;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            width: 400px;
+            height: 600px;
+            background-color: #f3f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+        #eboys-logo {
+            width: 45px;
+            height: 45px;
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            border-radius: 50%;
+            background-image: url('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG_20250112_105951_340-4edjrcdqw4kJGdGF1Zy0stQybpU93Z.webp');
+            background-size: cover;
+            background-position: center;
+        }
+        .pipe {
+            width: 30px;
+            position: absolute;
+            background-color: #2ecc71;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: rgb(14, 6, 6);
+        }
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #start-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #f1c40f;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="eboys-logo"></div>
+        <div id="score">0</div>
+        <div id="start-screen">
+            <h1>Eboys Jogo</h1>
+            <button id="start-button">Iniciar Jogo</button>
+        </div>
+    </div>
+
+    <script>
+        const eboysLogo = document.getElementById('eboys-logo');
+        const gameContainer = document.getElementById('game-container');
+        const scoreElement = document.getElementById('score');
+        const startScreen = document.getElementById('start-screen');
+        const startButton = document.getElementById('start-button');
+
+        let eboysY = 300;
+        let eboysVelocity = 0;
+        let eboysGravity = 0.5;
+        let score = 0;
+        let gameLoop;
+        let pipes = [];
+        let gameStarted = false;
+
+        function jump() {
+            eboysVelocity = -10;
+        }
+
+        function createPipe() {
+            const pipeHeight = Math.random() * 300 + 100;
+            const pipeTop = document.createElement('div');
+            const pipeBottom = document.createElement('div');
+
+            pipeTop.classList.add('pipe');
+            pipeBottom.classList.add('pipe');
+
+            pipeTop.style.height = pipeHeight + 'px';
+            pipeTop.style.top = '0';
+            pipeTop.style.left = '400px';
+
+            pipeBottom.style.height = (600 - pipeHeight - 150) + 'px';
+            pipeBottom.style.bottom = '0';
+            pipeBottom.style.left = '400px';
+
+            gameContainer.appendChild(pipeTop);
+            gameContainer.appendChild(pipeBottom);
+
+            pipes.push({ top: pipeTop, bottom: pipeBottom, passed: false });
+        }
+
+        function movePipes() {
+            pipes.forEach((pipe, index) => {
+                const pipeX = parseInt(pipe.top.style.left);
+                if (pipeX > -60) {
+                    pipe.top.style.left = (pipeX - 2) + 'px';
+                    pipe.bottom.style.left = (pipeX - 2) + 'px';
+                } else {
+                    pipes.splice(index, 1);
+                    gameContainer.removeChild(pipe.top);
+                    gameContainer.removeChild(pipe.bottom);
+                }
+
+                if (pipeX === 10 && !pipe.passed) {
+                    score++;
+                    scoreElement.textContent = score;
+                    pipe.passed = true;
+                }
+
+                if (detectCollision(pipe)) {
+                    gameOver();
+                }
+            });
+        }
+
+        function detectCollision(pipe) {
+            const eboysRect = eboysLogo.getBoundingClientRect();
+            const topPipeRect = pipe.top.getBoundingClientRect();
+            const bottomPipeRect = pipe.bottom.getBoundingClientRect();
+
+            return (
+                eboysRect.right > topPipeRect.left &&
+                eboysRect.left < topPipeRect.right &&
+                (eboysRect.top < topPipeRect.bottom || eboysRect.bottom > bottomPipeRect.top)
+            );
+        }
+
+        function gameOver() {
+            clearInterval(gameLoop);
+            gameStarted = false;
+            startScreen.style.display = 'flex';
+            startButton.textContent = 'Jogar Novamente';
+        }
+
+        function updateGame() {
+            eboysVelocity += eboysGravity;
+            eboysY += eboysVelocity;
+            eboysLogo.style.top = eboysY + 'px';
+
+            if (eboysY < 0 || eboysY > 540) {
+                gameOver();
+            }
+
+            movePipes();
+
+            if (pipes.length === 0 || pipes[pipes.length - 1].top.offsetLeft < 250) {
+                createPipe();
+            }
+        }
+
+        function startGame() {
+            eboysY = 300;
+            eboysVelocity = 0;
+            score = 0;
+            scoreElement.textContent = score;
+            pipes.forEach(pipe => {
+                gameContainer.removeChild(pipe.top);
+                gameContainer.removeChild(pipe.bottom);
+            });
+            pipes = [];
+            gameStarted = true;
+            startScreen.style.display = 'none';
+            gameLoop = setInterval(updateGame, 20);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameStarted) {
+                jump();
+            }
+        });
+
+        gameContainer.addEventListener('click', () => {
+            if (gameStarted) {
+                jump();
+            }
+        });
+
+        startButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
